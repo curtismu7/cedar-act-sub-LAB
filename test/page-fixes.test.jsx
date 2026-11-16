@@ -229,11 +229,13 @@ describe("honesty hedges are pinned where they are read (residual re-check)", ()
 });
 
 describe("the Run it yourself note (M2)", () => {
-  it("says the probe has never been run against a real tenant, lists what is assumed, and no longer names a handshake the probe does not do", () => {
+  it("says the probe was run against a real tenant on 2026-11-16 and what that did and did not test, and no longer names a handshake the probe does not do", () => {
     render(<Evidence evidence={EVIDENCE} />);
     const card = screen.getByTestId("evidence").textContent;
-    expect(card).toMatch(/never been run against a real PingFederate or door/);
-    for (const assumed of [/Basic client authentication/, /token endpoint path/, /index it names/, /HTTP 403/, /denied by policy/, /first owner run is the first test/i, /only its baseline row/i]) expect(card).toMatch(assumed);
+    expect(card).toMatch(/was run against a real PingFederate and door on 2026-11-16, three times/);
+    expect(card).toMatch(/reproduced the three rows of the measured table/);
+    expect(card).not.toMatch(/never been run/);
+    for (const tested of [/Basic client authentication/, /token endpoint path/, /default index/, /denied by policy/, /Not tested: that HTTP 403/, /status that accompanies a policy refusal/, /your own PingFederate client, scope or door/, /Your first run is the check/]) expect(card).toMatch(tested);
     expect(card).not.toMatch(/handshake/i);
   });
 });

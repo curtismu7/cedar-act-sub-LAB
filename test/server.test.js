@@ -486,7 +486,8 @@ test("R2 the evidence and scenario texts carry no unsourced 'verified', 'validat
   assert.ok(EVIDENCE.alsoTrue.some((l) => /RequiredClaims/.test(l)) && EVIDENCE.alsoTrue.some((l) => /Candidate/.test(l)));
   assert.match(EVIDENCE.cedarNote, /UNVERIFIED/, "the wrapper lines are labelled as not read from the tenant");
   assert.match(EVIDENCE.timing, /one observation/);
-  assert.match(EVIDENCE.commandNote, /never been run against a real/);
+  assert.match(EVIDENCE.commandNote, /was run against a real PingFederate and door on 2026-11-16, three times/);
+  assert.doesNotMatch(EVIDENCE.commandNote, /never been run/);
   const text = SCENARIOS.find((s) => s.id === "act-text");
   assert.match(text.what + text.say, /not measured|should|expected/i);
   assert.match(SCENARIOS.find((s) => s.id === "candidate").say, /not re-run/);

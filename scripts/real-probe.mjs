@@ -10,10 +10,11 @@
 // (once, on a labelled line, with its decoded claims: this is a learning lab) but never the client secret or the Basic value, and everything else
 // it prints, including anything the servers echo back, is redacted.
 //
-// EVIDENCE STATUS: the call sequence copies a scratch script that WAS run against a real PingFederate and a real Privilege door on 2026-11-16.
-// This file itself has never been run against a real tenant: it is only exercised against local fake listeners (test/real-probe-e2e.test.js).
-// Assumed, not tested by the lab: that your PF client accepts Basic auth and the scope in PF_SCOPE, that the index named by PROBE_INDEX exists
-// on your door, that HTTP 403 means a grant-layer refusal, and that a policy refusal carries "denied by policy" in the JSON-RPC error message.
+// EVIDENCE STATUS: this probe was run against a real PingFederate client and a real Privilege door on 2026-11-16, three times (no policy, two Active
+// act.sub policies created by hand, policies deleted) and reproduced the measured table. That tested Basic auth and the scope for that client, the
+// token endpoint path, the default index and "denied by policy" in a policy refusal. NOT tested: that HTTP 403 means a grant-layer refusal, the HTTP
+// status of a policy refusal (the verdict is decided on the message), and anything about your own PF client, scope or door: your first run is the check.
+// It is also covered against local fake listeners (test/real-probe-e2e.test.js).
 // Exit codes: 0 done, 1 a request failed, 2 refused to run (.env), 3 ran but says nothing about the policy: a verdict was unreadable, the token
 // was rejected (401), or every call was refused with HTTP 403 (no AI policy was evaluated).
 import { readFileSync, existsSync } from "node:fs";
