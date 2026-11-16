@@ -32,9 +32,9 @@ describe("server bind discipline", () => {
     expect(serverSrc).toMatch(/process\.env\.BIND_ALL === "1" \? "0\.0\.0\.0" : "127\.0\.0\.1"/);
   });
 
-  it("Dockerfile builds the UI and copies data + dist", () => {
+  it("Dockerfile builds the UI and copies dist", () => {
     expect(dockerfile).toMatch(/RUN npm run build/);
-    expect(dockerfile).toMatch(/COPY data \.\/data/);
+    expect(dockerfile).not.toMatch(/COPY data /);
     expect(dockerfile).toMatch(/USER node/);
   });
 });

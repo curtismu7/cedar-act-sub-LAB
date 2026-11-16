@@ -3,7 +3,6 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY web ./web
-COPY data ./data
 COPY vite.config.js ./
 RUN npm run build
 
@@ -13,7 +12,6 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY server ./server
-COPY data ./data
 COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 7819
