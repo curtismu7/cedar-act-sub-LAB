@@ -27,6 +27,6 @@ export const HELP_SECTIONS = [
   },
   {
     heading: "Mock and Real",
-    body: "The lab runs in Mock. Real is owner-only and disabled in the page: it runs from a terminal with npm run real, reads a local .env, and has never been run against a real PingFederate or door. The README in the repository has the details."
+    body: "The lab runs in Mock. Real is owner-only and disabled in the page: it runs from a terminal with npm run real, reads a local .env, and was run against a real PingFederate and door on 2026-11-16, where it reproduced the measured table. Your own first run is still the check for your PingFederate, scope and door. The README in the repository has the details."
   }
 ];

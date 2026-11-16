@@ -72,15 +72,13 @@ What it does, in order:
 
 It never creates, changes or deletes a tenant policy and follows no redirect. It prints the access token it was issued once, on a labelled line with its decoded claims, because this is a learning lab and you read it in your own terminal. It never prints the client secret or the Basic value (not even upper-cased or base64-encoded), and every other printed line, including anything a server echoes back, is redacted.
 
-**Evidence status (what is and is not known).** The call sequence above copies a scratch script that was run on 2026-11-16 against a real PingFederate and a real Privilege door: it minted a token with Basic auth, a scope and the door URL as audience, then called `tools/list`, `CountTool` (with `{"index": "gateway-events"}`) and `ListIndexTool` (with `{}`) with no handshake. **This probe itself has never been run against a real tenant.** The lab only runs it against local fake listeners in `test/real-probe-e2e.test.js` (plain JSON and event-stream replies, allow and refusal), which prove the wire format, the printing rules and the exit codes, not how a real PingFederate or door behaves. Assumed, not tested by the lab:
+**Evidence status (what is and is not known).** On 2026-11-16 this probe was run against one real PingFederate client and one real Privilege door, three times: with no policy, with two Active act.sub policies on the door (one naming the token's own agent on `CountTool`, one naming a different value on `ListIndexTool`), and after both policies were deleted. It printed `CountTool allowed` every time and `ListIndexTool` allowed, then `refused-by-policy: action denied by policy: ListIndexTool requires act.sub to be <other>`, then allowed again, which reproduces the measured table. The policies in that run were created and deleted by hand, outside the probe, which creates none. That run tested Basic client authentication and the scope for that one client, the token endpoint path, the default index (`gateway-events`), and that a policy refusal carries "denied by policy". The probe is also covered by `test/real-probe-e2e.test.js` against local fake listeners (plain JSON and event-stream replies, allow and refusal). Not tested: that HTTP 403 means a grant-layer refusal, the HTTP status that accompanies a policy refusal (the probe decides on the message), and anything about your own PingFederate client, scope or door. Treat your first run as the check of these:
 
-- your PingFederate client accepts Basic client authentication and the scope you put in `PF_SCOPE` (the scratch run needed a scope; which one is yours to supply);
-- the index named by `PROBE_INDEX` exists on your door (the default is the one the scratch run used);
-- HTTP 403 means a refusal at the grant layer, and 401 means the token was rejected (the status that accompanies a real AI-policy refusal was not measured; the probe decides on the message, not the status);
-- a policy refusal carries "denied by policy" in the JSON-RPC error message (the scratch run matched on it);
-- the token endpoint lives at `/as/token.oauth2` at the issuer's root.
-
-Treat the first owner run as the check of these.
+- your PingFederate client accepts Basic client authentication and the scope you put in `PF_SCOPE` (it did for the one client the probe was run with);
+- the index named by `PROBE_INDEX` exists on your door (the default existed on the door it was run with);
+- HTTP 403 means a refusal at the grant layer, and 401 means the token was rejected (not exercised: a policy refusal is decided on its message, not the status);
+- a policy refusal carries "denied by policy" in the JSON-RPC error message (it did on 2026-11-16);
+- the token endpoint lives at `/as/token.oauth2` at the issuer's root (it did for the PingFederate the probe was run with).
 
 ## Safety
 
