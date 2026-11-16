@@ -1,9 +1,10 @@
 // Studio diagram (rule 17): the diagram is diagram-studio/1 data, looked up BY NAME (its id), never hand-built in a component.
-// diagram-studio's apps.js tells apps to "load these by id from their own copy of the JSON": data/diagram.json is this lab's copy,
-// registered here under its id. The ReactFlow canvas renders the data's nodes and edges; Simulate walks the picked scenario over them.
-import cedarActSub from "../../data/diagram.json";
+// The data is the studio's own flow, CEDAR_ACT_SUB_FLOW in the diagram-studio repo (core/src/apps.js), vendored byte for byte into
+// studio-data/ with a sha256 pin (studio-data.sha256; re-vendor, never edit). The ReactFlow canvas renders the data's nodes and edges;
+// Simulate walks the picked scenario over them.
+import cedarActSubFlow from "./studio-data/cedar-act-sub-flow.json";
 
-const DIAGRAMS = { [cedarActSub.id]: cedarActSub };
+const DIAGRAMS = { [cedarActSubFlow.id]: cedarActSubFlow };
 
 export function getDiagram(id) {
   if (!Object.hasOwn(DIAGRAMS, id)) throw new Error(`unknown diagram "${id}"; known: ${Object.keys(DIAGRAMS).join(", ")}`);

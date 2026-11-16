@@ -11,7 +11,7 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 // Code comments are not shown to anyone; only strings and prose are checked.
 const shown = (p) => (/\.jsx?$/.test(p) ? read(p).replace(/\/\*[\s\S]*?\*\//g, "").split("\n").filter((l) => !l.trim().startsWith("//")).join("\n") : read(p));
 const FILES = [
-  "README.md", "docs/talk-track.md", "docs/shelf-entry.json", "content-pack.json", "data/diagram.json",
+  "README.md", "docs/talk-track.md", "docs/shelf-entry.json", "content-pack.json", "web/src/studio-data/cedar-act-sub-flow.json",
   "server/src/scenarios.js",
   ...readdirSync(join(root, "web/src")).filter((f) => /\.jsx?$/.test(f)).map((f) => `web/src/${f}`)
 ];
@@ -53,7 +53,7 @@ test("every mention of the 7 seconds is framed as one observation, not a propaga
 
 test("act as text, Candidate and RequiredClaims are never stated as fact: each mention carries a hedge", () => {
   const HEDGE = /believed|UNVERIFIED|simulated|not measured|not re-run|Expected|should/i;
-  for (const file of ["README.md", "docs/talk-track.md", "content-pack.json", "data/diagram.json"]) {
+  for (const file of ["README.md", "docs/talk-track.md", "content-pack.json", "web/src/studio-data/cedar-act-sub-flow.json"]) {
     for (const line of read(file).split("\n")) {
       if (/RequiredClaims|act (emitted )?as (the )?text|Candidate/i.test(line) && /not enforced|never to match|same job|no sub|no act\.sub/i.test(line)) {
         assert.match(line, HEDGE, `${file}: unhedged claim: ${line.slice(0, 140)}`);

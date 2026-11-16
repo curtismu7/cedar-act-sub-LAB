@@ -48,17 +48,17 @@ const node = (id) => rf.props.nodes.find((n) => n.id === id);
 const edge = (source, target) => rf.props.edges.find((e) => e.source === source && e.target === target);
 
 describe("diagram loaded by name (R17)", () => {
-  it("getDiagram('cedar-act-sub') returns the diagram-studio/1 data; an unknown name throws; edges are found by source and target", () => {
-    const d = getDiagram("cedar-act-sub");
+  it("getDiagram('cedar-act-sub-flow') returns the diagram-studio/1 data; an unknown name throws; edges are found by source and target", () => {
+    const d = getDiagram("cedar-act-sub-flow");
     expect(d.schema).toBe("diagram-studio/1");
-    expect(d.id).toBe("cedar-act-sub");
+    expect(d.id).toBe("cedar-act-sub-flow");
     expect(() => getDiagram("nope")).toThrow(/unknown diagram "nope"/);
     expect(edgeIndex(d, "cedar", "list")).toBe(4);
     expect(() => edgeIndex(d, "list", "cedar")).toThrow(/no edge/);
   });
 
   it("the data passes the studio's shape rules (ids, groups, edges that exist, step edge numbers)", () => {
-    const d = JSON.parse(readFileSync(join(root, "data/diagram.json"), "utf8"));
+    const d = JSON.parse(readFileSync(join(root, "web/src/studio-data/cedar-act-sub-flow.json"), "utf8"));
     const ID = /^[a-z0-9][a-z0-9_-]*$/;
     const COLORS = ["red", "dark", "grey", "blue", "green", "amber"];
     expect(d.schema).toBe("diagram-studio/1");
@@ -80,7 +80,7 @@ describe("diagram loaded by name (R17)", () => {
   it("the page builds its boxes and arrows from that data, one box per node, one arrow per edge", () => {
     fetchOk();
     render(<FlowSim activeScenario={null} speed={1000} resetKey={0} />);
-    const d = getDiagram("cedar-act-sub");
+    const d = getDiagram("cedar-act-sub-flow");
     expect(rf.props.nodes.map((n) => n.id)).toEqual(d.nodes.map((n) => n.id));
     expect(rf.props.edges.map((e) => `${e.source}>${e.target}`)).toEqual(d.edges.map((e) => `${e.source}>${e.target}`));
   });

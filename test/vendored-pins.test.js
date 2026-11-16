@@ -49,3 +49,18 @@ test("the shared TopMenu is the one the page imports, and the vendored styleshee
   assert.ok(existsSync(join(root, "scripts/check-no-ai-attribution.sh")));
   assert.ok(existsSync(join(root, "test/kit/demo-kit-conformance.mjs")));
 });
+
+test("the diagram is the studio's data, vendored byte for byte, loaded by name, with no hand-built local copy left (rule 17)", () => {
+  const dir = "web/src/studio-data";
+  const p = pins(`${dir}/studio-data.sha256`);
+  assert.deepEqual(p.map(([, f]) => f), ["cedar-act-sub-flow.json"]);
+  for (const [hash, file] of p) assert.equal(sha(`${dir}/${file}`), hash, `${file} differs from studio-data.sha256 (hand-edited, or re-vendored without re-pinning)`);
+  // The studio exports a flow as JSON.stringify(flow, null, 2) plus a newline: anything else is not its export.
+  const text = readFileSync(join(root, dir, "cedar-act-sub-flow.json"), "utf8");
+  assert.equal(text, `${JSON.stringify(JSON.parse(text), null, 2)}\n`);
+  assert.equal(JSON.parse(text).id, "cedar-act-sub-flow");
+  assert.equal(JSON.parse(text).schema, "diagram-studio/1");
+  assert.ok(!existsSync(join(root, "data/diagram.json")), "the lab's own hand-built copy must stay deleted");
+  assert.match(readFileSync(join(root, "web/src/diagram-data.js"), "utf8"), /from "\.\/studio-data\/cedar-act-sub-flow\.json"/);
+  assert.match(readFileSync(join(root, "web/src/FlowSim.jsx"), "utf8"), /getDiagram\("cedar-act-sub-flow"\)/);
+});

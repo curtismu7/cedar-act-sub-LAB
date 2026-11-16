@@ -7,7 +7,7 @@ import LabTrace from "./LabTrace.jsx";
 import RunResult from "./RunResult.jsx";
 
 // Studio diagram (rule 17): the nodes and edges come from the diagram-studio/1 data, looked up by name, never hand-built here.
-const studio = getDiagram("cedar-act-sub");
+const studio = getDiagram("cedar-act-sub-flow");
 
 // The shared outline + stripe look (standalone-ui.css .dg-node); colour by studio group.
 const GROUP_CLASS = { pf: "dg-blue", agent: "dg-amber", gw: "dg-dark", tools: "dg-green" };

@@ -71,6 +71,18 @@ for (const file of walk(root)) {
 
 console.log(`repo-checks: scanned ${files} files`);
 
+// Studio data (rule 17): the diagram is the studio's own flow, vendored byte for byte; its file must equal the hash pinned in
+// web/src/studio-data/studio-data.sha256, and the lab's old hand-built copy must not come back.
+{
+  const dir = join(root, "web", "src", "studio-data");
+  const pinPath = join(dir, "studio-data.sha256");
+  const pins = existsSync(pinPath) ? readFileSync(pinPath, "utf8").split("\n").filter((l) => /^[0-9a-f]{64}\s/.test(l)).map((l) => l.split(/\s+/)) : [];
+  if (pins.length !== 1 || pins[0][1] !== "cedar-act-sub-flow.json") failures.push("web/src/studio-data/studio-data.sha256 must pin exactly cedar-act-sub-flow.json");
+  else if (createHash("sha256").update(readFileSync(join(dir, pins[0][1]))).digest("hex") !== pins[0][0]) failures.push("web/src/studio-data/cedar-act-sub-flow.json differs from its pin");
+  else console.log("repo-checks: vendored studio data matches its pin");
+  if (existsSync(join(root, "data", "diagram.json"))) failures.push("data/diagram.json: the hand-built local diagram copy must stay deleted (rule 17)");
+}
+
 // Vendored stylesheet: must equal the hash pinned in scripts/standalone-ui.sha256 (so CI, which has no family checkout, catches a
 // hand edit), and must equal the family canonical when that checkout exists (re-vendor with cp, then re-pin).
 const vendored = join(root, "web", "standalone-ui.css");

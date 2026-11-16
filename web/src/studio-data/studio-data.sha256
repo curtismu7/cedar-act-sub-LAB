@@ -1,0 +1,2 @@
+# Studio data vendored byte for byte, never hand-edited. cedar-act-sub-flow.json is the diagram-studio repo's CEDAR_ACT_SUB_FLOW (core/src/apps.js, id cedar-act-sub-flow), exported as JSON.stringify(flow, null, 2) plus a newline, from its pull request branch feat/cedar-act-sub-flow at 72d67a9 (PR 16). Re-vendor from the studio's main once that PR has merged, then re-pin: shasum -a 256 cedar-act-sub-flow.json
+f8f7d1fb528a0f4ab394a0e5f788f9349ef4dd28d90fc4367c73ebb9daad4248  cedar-act-sub-flow.json
