@@ -5,6 +5,7 @@ RUN npm ci
 COPY web ./web
 COPY data ./data
 COPY vite.config.js ./
+COPY docs ./docs
 RUN npm run build
 
 FROM node:26-alpine

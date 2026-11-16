@@ -1,12 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
 import TopMenu from "./top-menu/TopMenu.jsx";
 import VerifyMark from "./components/VerifyMark.jsx";
+import ShelfLink from "./components/ShelfLink.jsx";
+import HelpDialog from "./help-dialog/HelpDialog.jsx";
+import TalkTrackDialog from "./talk-track/TalkTrackDialog.jsx";
+import { HELP_SECTIONS } from "./helpContent.js";
+import { TALK_TRACK } from "./talkTrack.js";
 import "./top-menu/top-menu.css";
 import SimulationBanner from "./Banner.jsx";
 import FlowSim from "./FlowSim.jsx";
 import ScenarioPicker from "./ScenarioPicker.jsx";
 import Evidence from "./Evidence.jsx";
 import { useApi, postJson } from "./api.js";
+
+// The version the header shows: package.json's, fixed at build time (vite.config.js).
+const LAB_VERSION = typeof __LAB_VERSION__ === "string" ? __LAB_VERSION__ : null;
 
 // Presenter mode (rule 3): shows the talk-track line for the current scenario while presenting.
 function presenterSay(active) {
@@ -25,6 +33,8 @@ export default function App() {
     try { return localStorage.getItem("theme") || "auto"; } catch { return "auto"; }
   });
   const [presenter, setPresenter] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [talkOpen, setTalkOpen] = useState(false);
   // The section the nav marks as current: follows the link the viewer picked, and the address when it changes.
   const [section, setSection] = useState(() => (typeof location !== "undefined" && location.hash === "#evidence" ? "evidence" : "flow"));
   const modeBox = useRef(null);
@@ -96,6 +106,9 @@ export default function App() {
             mode={{ value: source === "real" ? "real" : "mock", onChange: (m) => switchMode(m === "real" ? "real" : "mock"), realAvailable: info.data ? info.data.realAvailable !== false : null, realHint: info.data?.realReason || undefined }}
             theme={{ value: theme, onChange: setTheme }}
             present={{ active: presenter, onToggle: () => setPresenter((v) => !v), label: "Presenter (Alt+P)" }}
+            talkTrack={{ active: talkOpen, onToggle: () => setTalkOpen((v) => !v) }}
+            help={{ onClick: () => setHelpOpen(true), title: "What this lab is, and what is simulated" }}
+            version={LAB_VERSION}
             onReset={reset}
             extra={<>
               <label className="speed-control" htmlFor="speed">Speed
@@ -113,6 +126,7 @@ export default function App() {
               )}
             </>}
           >
+            <ShelfLink />
             <VerifyMark id="cedar-act-sub-lab" />
           </TopMenu>
         </div>
@@ -140,6 +154,8 @@ export default function App() {
         <FlowSim activeScenario={activeScenario} speed={speed} resetKey={resetKey} />
         <Evidence evidence={data && data.evidence} />
       </main>
+      <HelpDialog isOpen={helpOpen} onClose={() => setHelpOpen(false)} sections={HELP_SECTIONS} />
+      <TalkTrackDialog isOpen={talkOpen} onClose={() => setTalkOpen(false)} talk={TALK_TRACK} />
       <footer className="app-footer">
         Tester tier · runs are simulated · mock tokens labelled · the measured card is static evidence from 2026-11-16
       </footer>
