@@ -1,0 +1,21 @@
+name: cedar-act-sub-lab
+
+services:
+  cedar-act-sub-lab:
+    build: .
+    image: cedar-act-sub-lab:latest
+    container_name: cedar-act-sub-lab
+    ports:
+      - "127.0.0.1:${HOST_PORT:-7819}:7819"
+    environment:
+      - PORT=7819
+      - BIND_ALL=1
+      - LAB_ALLOWED_HOSTS=localhost:${HOST_PORT:-7819},127.0.0.1:${HOST_PORT:-7819},cedar-act-sub-lab.local.ping-devops.com:7819,cedar-act-sub-lab:7819,cedar-act-sub-lab.local.ping-devops.com:8443,local.ping-devops.com:8443
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped

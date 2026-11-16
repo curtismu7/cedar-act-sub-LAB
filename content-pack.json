@@ -1,0 +1,152 @@
+{
+ "schema": "demo-content-pack/1",
+ "id": "cedar-act-sub-lab",
+ "title": "Cedar act.sub Lab",
+ "version": "1.0.0",
+ "demo": {
+  "id": "cedar-act-sub-lab",
+  "name": "Cedar act.sub Lab",
+  "catalog": "D134",
+  "baseUrl": "http://127.0.0.1:7819",
+  "doctor": "/api/health",
+  "tags": ["pingone-privilege", "pingfederate", "agent-identity", "authorization-policy", "simulated"]
+ },
+ "glossary": [
+  {
+   "id": "act-sub",
+   "term": "act.sub (actor)",
+   "definition": "The sub inside the RFC 8693 act claim: which agent is acting. For the Cedar rule the act claim is an OBJECT such as {\"sub\": \"agent-client-example\"} (that is what the real run used). If act were emitted as the text \"{}\" the rule is believed to find no sub and so never to match (UNVERIFIED: simulated here, not measured).",
+   "aliases": ["act claim", "actor"]
+  },
+  {
+   "id": "cedar-ai-policy",
+   "term": "Cedar AI policy",
+   "definition": "Cedar is the policy language Privilege uses for its AI policies. An AI policy can forbid one tool call. The template \"Restrict a tool to tokens carrying a claim\" generates a forbid rule with an unless clause on the token's claims; the contains(...) test inside it was read from a real tenant on 2026-11-16. This template's rule is a .contains() test, not a pattern. Whether the real rule is exact, substring or set membership was not measured (UNVERIFIED).",
+   "aliases": ["AI policy", "Cedar"]
+  },
+  {
+   "id": "active-candidate",
+   "term": "Active vs Candidate",
+   "definition": "Per the Privilege console documentation (not re-run in this lab, UNVERIFIED) only an Active policy is enforced and a Candidate policy is not, so a refusal you expected will not happen until the policy is Active.",
+   "aliases": ["policy state"]
+  },
+  {
+   "id": "required-claims",
+   "term": "Required claims",
+   "definition": "Claims the gateway demands on the presented token, checked at sign-in on the identity or grant. Believed to do the same job as an act.sub policy, earlier (UNVERIFIED: not tested in this lab or on the real tenant run).",
+   "aliases": ["RequiredClaims"]
+  },
+  {
+   "id": "mock-door",
+   "term": "Mock door",
+   "definition": "This lab's in-process stand-in for the Privilege gateway. It evaluates one rule shape (a tool, the claim path act.sub, a value it compares exactly). It is not a Cedar engine and it decides nothing real.",
+   "aliases": ["simulated gateway"]
+  }
+ ],
+ "sources": [
+  {
+   "id": "rfc8693",
+   "title": "RFC 8693: OAuth 2.0 Token Exchange",
+   "url": "https://www.rfc-editor.org/rfc/rfc8693",
+   "kind": "standard",
+   "use": "Defines the act (actor) claim whose sub the policy reads.",
+   "status": "not-read",
+   "checked": "2026-11-16"
+  },
+  {
+   "id": "cedar-docs",
+   "title": "Cedar policy language",
+   "url": "https://docs.cedarpolicy.com/",
+   "kind": "vendor-docs",
+   "use": "The policy language behind the AI policies; the lab uses one rule shape only.",
+   "status": "not-read",
+   "checked": "2026-11-16"
+  }
+ ],
+ "cards": [
+  {
+   "id": "try-baseline",
+   "label": "Step 1: baseline, no policy",
+   "description": "The same token calls CountTool and ListIndexTool on a door with no policy. Both are allowed.",
+   "group": "try-it",
+   "action": { "type": "route", "href": "/#flow" },
+   "terms": ["act-sub"],
+   "story": "S01"
+  },
+  {
+   "id": "try-policies",
+   "label": "Step 2: add two Active act.sub policies",
+   "description": "Shows the Cedar this lab generates for the template, one policy per tool, one naming the token's own agent and one naming a different agent. Only the contains(...) test was read from the real tenant; the lines around it are UNVERIFIED.",
+   "group": "try-it",
+   "action": { "type": "route", "href": "/#flow" },
+   "terms": ["cedar-ai-policy", "act-sub"],
+   "story": "S02"
+  },
+  {
+   "id": "try-same-token",
+   "label": "Step 3: same token, two tools",
+   "description": "The policy naming this token's agent lets the call through; the policy naming a different agent value refuses the same token, with JSON-RPC -32600 and the policy's reason. Measured with one real agent; a second agent was not tested.",
+   "group": "try-it",
+   "action": { "type": "route", "href": "/#flow" },
+   "terms": ["cedar-ai-policy", "act-sub", "mock-door"],
+   "story": "S03"
+  },
+  {
+   "id": "try-remove",
+   "label": "Step 4: remove the policies",
+   "description": "Delete both policies and the same token is allowed on both tools again.",
+   "group": "try-it",
+   "action": { "type": "route", "href": "/#flow" },
+   "story": "S04"
+  },
+  {
+   "id": "try-extras",
+   "label": "Extra scenarios: act as text, no token, Candidate",
+   "description": "Three simulated cases, none measured: act emitted as the text \"{}\" is believed never to match, a call with no token is refused at sign-in in this mock, and a Candidate policy is not enforced per the console documentation (not re-run).",
+   "group": "try-it",
+   "action": { "type": "route", "href": "/#flow" },
+   "terms": ["act-sub", "active-candidate"],
+   "story": "S05"
+  },
+  {
+   "id": "card-measured",
+   "label": "Measured on a real tenant, 2026-11-16",
+   "description": "The result of the real run, shown as static evidence apart from the mock runs, with what was not measured.",
+   "group": "reference",
+   "action": { "type": "route", "href": "/#evidence" },
+   "story": "S06"
+  }
+ ],
+ "stories": [
+  {
+   "id": "S01",
+   "title": "Baseline",
+   "say": "No policy: the same token gets both tools. That is what every later step is compared with."
+  },
+  {
+   "id": "S02",
+   "title": "Two Active policies",
+   "say": "Same template, same Cedar shape, different tool and different agent. Only Active is enforced."
+  },
+  {
+   "id": "S03",
+   "title": "Same token, two tools",
+   "say": "Where the policy names this agent the call passes; where it names a different agent the call is refused and the reason names the claim."
+  },
+  {
+   "id": "S04",
+   "title": "Remove the policies",
+   "say": "Delete the policies and the same token is allowed on both tools again: the policy was the only change."
+  },
+  {
+   "id": "S05",
+   "title": "Edge cases",
+   "say": "Three edge cases, simulated and not measured: act as text is believed never to match, no token is refused at sign-in in this mock, and per the console documentation a Candidate is not enforced (not re-run)."
+  },
+  {
+   "id": "S06",
+   "title": "What was measured",
+   "say": "One real client with one act.sub and two Active policies: the policy naming a different value refused the same token. In one run the first poll, about 7 seconds after creation, already showed the refusal: one observation, not a propagation time. A second real agent was not measured."
+  }
+ ]
+}
