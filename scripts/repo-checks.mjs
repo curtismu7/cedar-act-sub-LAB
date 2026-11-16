@@ -50,6 +50,9 @@ function walk(dir, out = []) {
 // The vendored conformance gate and the family attribution checker quote the
 // patterns they enforce (org names, attribution lines); skip them the same way.
 const VENDORED_ALLOWED = new Set(["standalone-ui.css", "demo-kit-conformance.mjs", "check-no-ai-attribution.sh"]);
+// The vendored floating-dialog files name the project they were ported from in their comments. They are byte-pinned (checked below), so they are
+// skipped here the same way.
+const VENDORED_DIRS = ["/web/src/floating-dialog/"];
 
 let files = 0;
 for (const file of walk(root)) {
@@ -58,7 +61,7 @@ for (const file of walk(root)) {
   // The vendored family stylesheet is canonical and shared; its comments name
   // other projects by design. Drift is caught separately by check-css/vendored sha.
   const text = readFileSync(file, "utf8");
-  if (VENDORED_ALLOWED.has(file.split("/").pop()) || file.endsWith("repo-checks.mjs")) continue;
+  if (VENDORED_ALLOWED.has(file.split("/").pop()) || file.endsWith("repo-checks.mjs") || VENDORED_DIRS.some((d) => file.includes(d))) continue;
   const hostHits = forbiddenHostHits(text);
   if (hostHits.length) failures.push(`${file}: non-proxy host(s) of the family domain: ${[...new Set(hostHits)].join(", ")}`);
   for (const re of FORBIDDEN) {
@@ -86,6 +89,27 @@ if (existsSync(vendored)) {
     else console.log("repo-checks: vendored standalone-ui.css matches canonical");
   }
 }
+
+// Vendored shared components (the shared services catalogue): every file must equal the hash in its pin file (CI has no family checkout; a
+// local checkout can lag the canonical, so the pin is what is enforced). Re-vendor with cp from the canonical, then re-pin; never edit a copy.
+const VENDORED = [
+  { dir: "web/src/floating-dialog", pin: "floating-dialog.sha256" },
+  { dir: "web/src/help-dialog", pin: "help-dialog.sha256" },
+  { dir: "web/src/talk-track", pin: "talk-track.sha256" },
+  { dir: "web/src/components", pin: "ShelfLink.sha256", only: ["ShelfLink.jsx"] }
+];
+for (const { dir, pin, only } of VENDORED) {
+  const pinPath = join(root, dir, pin);
+  if (!existsSync(pinPath)) { failures.push(`${dir}/${pin} is missing`); continue; }
+  const pins = readFileSync(pinPath, "utf8").split("\n").filter((l) => /^[0-9a-f]{64}\s/.test(l)).map((l) => l.split(/\s+/));
+  if (!pins.length || (only && pins.map(([, f]) => f).join() !== only.join())) failures.push(`${dir}/${pin} does not pin the expected files`);
+  for (const [hash, file] of pins) {
+    const f = join(root, dir, file);
+    if (!existsSync(f)) { failures.push(`${dir}/${file} is pinned but missing`); continue; }
+    if (sha(f) !== hash) failures.push(`${dir}/${file} differs from its pin ${pin}`);
+  }
+}
+console.log("repo-checks: vendored shared components match their pins");
 
 if (failures.length) {
   for (const f of failures) console.error(`FAIL ${f}`);

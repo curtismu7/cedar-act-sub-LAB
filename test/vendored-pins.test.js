@@ -1,4 +1,4 @@
-// The vendored shared pieces match their pin files byte for byte (rules 22, 24): TopMenu and JsonPane. Change them in the canonical
+// The vendored shared pieces match their pin files byte for byte (rules 22, 24): TopMenu, JsonPane and the shared dialogs. Change them in the canonical
 // copy under AI-DEMO-Standalone/shared, re-vendor with cp, re-pin; never edit them here. (gateway-trace and verify-mark have their own pin tests.)
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -24,6 +24,20 @@ test("web/src/components/JsonPane.* matches its pin files", () => {
     const [hash, name] = readFileSync(join(root, dir, pinFile), "utf8").trim().split(/\s+/);
     assert.equal(name, file, pinFile);
     assert.equal(sha(`${dir}/${file}`), hash, `${file} differs from ${pinFile}`);
+  }
+});
+
+test("the shared dialogs (floating-dialog, help-dialog, talk-track) and ShelfLink match their pin files, and every file in those folders is pinned", () => {
+  const sets = [
+    ["web/src/floating-dialog", "floating-dialog.sha256", ["FloatingDialog.jsx", "floating-dialog.css", "floating-dialog.test.jsx", "geometry.js", "useFloatingPanel.js"]],
+    ["web/src/help-dialog", "help-dialog.sha256", ["HelpDialog.jsx"]],
+    ["web/src/talk-track", "talk-track.sha256", ["TalkTrackDialog.jsx"]],
+    ["web/src/components", "ShelfLink.sha256", ["ShelfLink.jsx"]]
+  ];
+  for (const [dir, pinFile, files] of sets) {
+    const p = pins(`${dir}/${pinFile}`);
+    assert.deepEqual(p.map(([, f]) => f).sort(), [...files].sort(), `${dir}/${pinFile} pins`);
+    for (const [hash, file] of p) assert.equal(sha(`${dir}/${file}`), hash, `${dir}/${file} differs from ${pinFile} (hand-edited, or re-vendored without re-pinning)`);
   }
 });
 
