@@ -179,6 +179,55 @@ describe("honesty (B1, M1, M3, M4, M5, M6, BD-1, BD-3, BD-7, R2)", () => {
   });
 });
 
+// Residual re-check (H2, H3, H4 and the unhedged sentences): each hedge phrase is pinned where the viewer reads it, so deleting it fails a test.
+describe("honesty hedges are pinned where they are read (residual re-check)", () => {
+  const whatOf = () => screen.getByTestId("scenario-about").querySelectorAll("p")[1].textContent;
+  const sentenceWith = (text, needle) => text.split(/(?<=[.!?])\s+/).find((x) => x.includes(needle)) || "";
+
+  it("H2 the act-text scenario text says '(simulated, not measured)' in the description and in the presenter line", async () => {
+    mockFetch();
+    render(<App />);
+    fireEvent.click(await screen.findByTestId("presenter"));
+    await pick("act emitted as text");
+    expect(whatOf()).toContain("(simulated, not measured)");
+    expect(screen.getByTestId("presenter-say").textContent).toContain("(simulated, not measured)");
+  });
+
+  it("H3 the Candidate scenario text says UNVERIFIED", async () => {
+    mockFetch();
+    render(<App />);
+    await pick("Candidate state");
+    expect(whatOf()).toContain("UNVERIFIED");
+    expect(whatOf()).toMatch(/not re-run here/);
+  });
+
+  it("H4 the banner says whether the real rule compares exactly was not measured", async () => {
+    mockFetch();
+    render(<App />);
+    expect((await screen.findByTestId("sim-banner")).textContent).toContain("whether the real rule does was not measured");
+  });
+
+  it("the no-token text hedges in the very sentence that says the door refuses at sign-in (401)", async () => {
+    mockFetch();
+    render(<App />);
+    fireEvent.click(await screen.findByTestId("presenter"));
+    await pick("No token");
+    const sentence = sentenceWith(whatOf(), "refuses at sign-in");
+    expect(sentence).toMatch(/401/);
+    expect(sentence).toMatch(/simulated, not measured/);
+    expect(sentenceWith(screen.getByTestId("presenter-say").textContent, "refuses at sign-in")).toMatch(/simulated, not measured/);
+  });
+
+  it("the 'Not measured' item about act as text says it is believed, not measured, instead of a flat claim", () => {
+    render(<Evidence evidence={EVIDENCE} />);
+    const item = [...screen.getByTestId("not-measured").querySelectorAll("li")].find((li) => li.textContent.includes("act emitted as the TEXT"));
+    expect(item).toBeTruthy();
+    expect(item.textContent).toMatch(/believed/);
+    expect(item.textContent).toMatch(/UNVERIFIED/);
+    expect(item.textContent).not.toMatch(/the rule needs an object/);
+  });
+});
+
 describe("the Run it yourself note (M2)", () => {
   it("says the probe has never been run against a real tenant, lists what is assumed, and no longer names a handshake the probe does not do", () => {
     render(<Evidence evidence={EVIDENCE} />);

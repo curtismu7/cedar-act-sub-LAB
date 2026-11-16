@@ -114,9 +114,13 @@ export function buildServer({ netguard } = {}) {
   });
 
   app.post("/api/mode", (req, res) => {
-    const { source } = req.body || {};
+    // Rule 19: the body is exactly {source}; an unknown key, an array or a missing body is a 400.
+    const body = req.body;
+    const keys = body && typeof body === "object" && !Array.isArray(body) ? Object.keys(body) : [];
+    if (keys.length !== 1 || keys[0] !== "source") return res.status(400).json({ error: "bad_request", message: "body must be exactly {source:\"mock\"|\"real\"}" });
+    const { source } = body;
     if (source === "real") return res.status(409).json({ error: "real_unavailable", message: REAL_REASON });
-    if (source !== "mock") return res.status(400).json({ error: "bad_request", message: "body must be {source:\"mock\"|\"real\"}" });
+    if (source !== "mock") return res.status(400).json({ error: "bad_request", message: "body must be exactly {source:\"mock\"|\"real\"}" });
     state.source = "mock";
     res.json({ source: state.source });
   });

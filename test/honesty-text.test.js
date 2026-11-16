@@ -69,3 +69,17 @@ test("the shelf entry and the pack cards do not say a different agent was refuse
   const shelf = JSON.parse(read("docs/shelf-entry.json"));
   assert.match(shelf.description, /one real agent/);
 });
+
+// Item 6: the probe prints the access token on purpose, never the client secret or the Basic value, sends no initialize call, and takes
+// audience = DOOR_URL and scope = PF_SCOPE. No text may still describe it as the old "mint a token and run the baseline probe".
+test("every description of the real probe matches what it does", () => {
+  for (const file of ["README.md", "CLAUDE.md", "docs/talk-track.md", "server/src/scenarios.js"]) {
+    assert.doesNotMatch(shown(file), /mints a (client-credentials )?token,? (and )?runs the baseline probe/i, `${file} still says the old probe description`);
+    assert.doesNotMatch(shown(file), /never prints the token/i, `${file} says the probe never prints the token`);
+  }
+  const SCENARIOS_TEXT = shown("server/src/scenarios.js");
+  for (const needle of [/audience = DOOR_URL/, /scope = PF_SCOPE/, /on purpose/, /never the client secret or the Basic value/, /no initialize call/]) assert.match(SCENARIOS_TEXT, needle);
+  for (const file of ["README.md", "CLAUDE.md"]) assert.match(shown(file), /on purpose|because this is a learning lab/i, `${file} must say the token is printed on purpose`);
+  for (const file of ["README.md", "CLAUDE.md"]) assert.match(shown(file), /never (prints )?the client secret or the Basic value/i, `${file} must say the client secret and Basic value are never printed`);
+  assert.match(shown("docs/talk-track.md"), /printed on purpose/);
+});
