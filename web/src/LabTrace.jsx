@@ -10,6 +10,10 @@ export const TRACE_BASIS =
   "Simulated: this lab's in-process mock door computed every request, reply and decision below. It is not Privilege and not a Cedar engine. " +
   "Real mode is owner-only and not available in this page; the measured card further down is the record from the real tenant.";
 
+// The panel's default marks `result` as hot, which draws an allowed (200) reply in the same strong style as a refusal's `error`. Only the
+// refusal is an alert here, so the panel is told to mark `error` alone.
+export const TRACE_HOT = ["error"];
+
 export default function LabTrace({ exchanges, result }) {
   const none = !exchanges || exchanges.length === 0;
   return (
@@ -25,7 +29,7 @@ export default function LabTrace({ exchanges, result }) {
           </p>
         </section>
       ) : (
-        <GatewayTrace source="mock" title={TRACE_TITLE} basisNote={TRACE_BASIS} exchanges={exchanges} />
+        <GatewayTrace source="mock" title={TRACE_TITLE} basisNote={TRACE_BASIS} hot={TRACE_HOT} exchanges={exchanges} />
       )}
     </div>
   );
