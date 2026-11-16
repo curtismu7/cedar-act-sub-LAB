@@ -15,6 +15,7 @@ const CLIENT_ID = "probe-client-1";
 const SECRET = "sekret-Value-9f8e7d6c5b4a";
 const SCOPE = "probe:read";
 const B64 = Buffer.from(`${CLIENT_ID}:${SECRET}`).toString("base64");
+const SECRET_B64 = Buffer.from(SECRET).toString("base64");
 const seg = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const TOKEN = `${seg({ alg: "none" })}.${seg({ act: { sub: "probe-agent-example" }, iss: "x" })}.c2lnbmF0dXJlc2lnbmF0dXJl`;
 const OPAQUE = "opaque-access-token-0123456789abcdef";
@@ -48,7 +49,7 @@ async function fakes(opts = {}) {
     entry.good = good;
     if (opts.pfFail || !good) {
       res.writeHead(401, { "content-type": "application/json" });
-      return res.end(JSON.stringify({ error: "invalid_client", error_description: opts.echo ? `bad auth ${req.headers.authorization || ""} secret ${SECRET} body ${body}` : "bad client" }));
+      return res.end(JSON.stringify({ error: "invalid_client", error_description: opts.echo ? `bad auth ${req.headers.authorization || ""} secret ${SECRET} upper ${SECRET.toUpperCase()} b64 ${SECRET_B64} body ${body}` : "bad client" }));
     }
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({ access_token: token, token_type: "Bearer", expires_in: 300 }));
@@ -62,7 +63,8 @@ async function fakes(opts = {}) {
     try { rpc = JSON.parse(text); } catch { /* leave null */ }
     entry.rpcMethod = rpc && rpc.method;
     entry.params = rpc && rpc.params;
-    const echo = opts.echo ? ` echo auth=${req.headers.authorization} secret=${SECRET} b64=${B64} access_token="${token}" client_secret=${SECRET} raw=${token}` : "";
+    // The first thing in the echo is the new forms (the probe caps a printed reason at 240 characters): upper-cased secret, base64 of the secret.
+    const echo = opts.echo ? ` echo upper=${SECRET.toUpperCase()} sb64=${SECRET_B64} sb64u=${SECRET_B64.toUpperCase()} basicu=${B64.toUpperCase()} auth=${req.headers.authorization} secret=${SECRET} b64=${B64} access_token="${token}" client_secret=${SECRET} raw=${token}` : "";
     const send = (status, obj) => {
       if (opts.shape === "sse") {
         res.writeHead(status === 400 ? 200 : status, { "content-type": "text/event-stream" });
@@ -76,6 +78,7 @@ async function fakes(opts = {}) {
       && req.headers.authorization === `Bearer ${token}`;
     entry.headersOk = headersOk;
     if (!headersOk || !rpc) return send(400, { jsonrpc: "2.0", id: null, error: { code: -32000, message: `bad request${echo}` } });
+    if (opts.forbidTool && rpc.method === "tools/call" && rpc.params && rpc.params.name === opts.forbidTool) { res.writeHead(403, { "content-type": "text/plain" }); return res.end("no"); }
     if (opts.doorStatus) { res.writeHead(opts.doorStatus, { "content-type": "text/plain" }); return res.end(`no${echo}`); }
     if (opts.strictSession) return send(400, { jsonrpc: "2.0", id: rpc.id, error: { code: -32600, message: `Bad Request: server not initialized${echo}` } });
     if (opts.echo && rpc.method === "tools/list") return send(200, { jsonrpc: "2.0", id: rpc.id, error: { code: -32000, message: `list failed${echo}` } });
@@ -119,6 +122,11 @@ async function withFakes(opts, fn, envExtra) {
   const f = await fakes(opts);
   try { return await fn(f, await runProbe(baseEnv(f, envExtra))); } finally { await f.close(); }
 }
+// The secret and the Basic value, in every form a door could echo them: as is, upper-cased, base64 of the secret (also upper-cased).
+const noSecretIn = (out) => {
+  const low = out.toLowerCase();
+  for (const v of [SECRET, B64, SECRET_B64, SECRET_B64.replace(/=+$/, "")]) assert.ok(!low.includes(v.toLowerCase()), `leaked ${v.slice(0, 6)}... (any case): ${out.slice(0, 400)}`);
+};
 const doorCalls = (f) => f.log.filter((e) => e.who === "door");
 
 for (const shape of ["json", "sse"]) {
@@ -152,7 +160,7 @@ for (const shape of ["json", "sse"]) {
   test(`HI-1 (${shape} replies): a door that echoes the bearer token, the client secret and the Basic value never gets them printed`, async () => {
     for (const refuse of [false, true]) {
       await withFakes({ shape, echo: true, refuse }, (f, r) => {
-        for (const secret of [SECRET, B64]) assert.ok(!r.out.includes(secret), `leaked ${secret.slice(0, 6)}...`);
+        noSecretIn(r.out);
         assert.equal(r.out.split(TOKEN).length - 1, 1, "the token is shown once, on its labelled line, and the door's echo of it is redacted");
         assert.match(r.stdout, new RegExp(`^token\\s+REAL access token, shown on purpose \\(learning lab\\): ${TOKEN.replace(/\./g, "\\.")}$`, "m"));
         assert.match(r.stdout, /^tools\/list\s+unreadable: JSON-RPC error -32000: list failed/m, "the line is still printed, redacted");
@@ -167,7 +175,7 @@ for (const shape of ["json", "sse"]) {
 
 test("HI-1: an opaque (non-JWT) token is shown once on its labelled line and the door's echo of it is redacted", async () => {
   await withFakes({ shape: "json", echo: true, opaque: true }, (f, r) => {
-    assert.ok(!r.out.includes(SECRET) && !r.out.includes(B64), r.out);
+    noSecretIn(r.out);
     assert.equal(r.out.split(OPAQUE).length - 1, 1, r.out);
     assert.match(r.stdout, new RegExp(`^token\\s+REAL access token, shown on purpose \\(learning lab\\): ${OPAQUE}$`, "m"));
     assert.match(r.stdout, /^tools\/list\s+unreadable/m);
@@ -185,7 +193,7 @@ test("HI-1: when PingFederate refuses and echoes the Basic value, the secret and
   await withFakes({ pfFail: true, echo: true }, (f, r) => {
     assert.equal(r.code, 1);
     assert.match(r.out, /PingFederate did not issue a token \(HTTP 401\)/);
-    assert.ok(!r.out.includes(SECRET) && !r.out.includes(B64), r.out);
+    noSecretIn(r.out);
     assert.equal(doorCalls(f).length, 0, "no door call without a token");
   });
 });
@@ -193,13 +201,13 @@ test("HI-1: when PingFederate refuses and echoes the Basic value, the secret and
 test("HI-1: 401 / 403 bodies that echo the token are redacted (the token itself appears once, on its own line)", async () => {
   for (const doorStatus of [401, 403]) {
     await withFakes({ doorStatus, echo: true }, (f, r) => {
-      assert.ok(!r.out.includes(SECRET) && !r.out.includes(B64), r.out);
+      noSecretIn(r.out);
       assert.equal(r.out.split(TOKEN).length - 1, 1, "only the labelled token line shows the token; the echoed error body is redacted");
     });
   }
 });
 
-test("RP-7: HTTP 401 is 'token-rejected' (exit 3), HTTP 403 is 'refused-at-grant' (a decision, exit 0)", async () => {
+test("RP-7: HTTP 401 is 'token-rejected' (exit 3); HTTP 403 on every call is 'refused-at-grant' and also exit 3 (no AI policy was evaluated)", async () => {
   await withFakes({ doorStatus: 401 }, (f, r) => {
     assert.match(r.stdout, /^CountTool\s+token-rejected: HTTP 401/m);
     assert.equal(r.code, 3);
@@ -207,7 +215,9 @@ test("RP-7: HTTP 401 is 'token-rejected' (exit 3), HTTP 403 is 'refused-at-grant
   await withFakes({ doorStatus: 403 }, (f, r) => {
     assert.match(r.stdout, /^CountTool\s+refused-at-grant: HTTP 403: refused by a policy at the grant layer/m);
     assert.doesNotMatch(r.stdout, /refused-by-policy/);
-    assert.equal(r.code, 0);
+    assert.equal(r.code, 3, "every call 403: no AI policy was evaluated, so the run says nothing about the policy");
+    assert.match(r.stdout, /says nothing about the policy/);
+    assert.doesNotMatch(r.stdout, /it is the baseline/, "never the baseline sentence");
   });
 });
 
@@ -265,4 +275,26 @@ test("the probe sends nothing but POSTs to the token endpoint and the door (neve
     const paths = new Set(f.log.map((e) => `${e.method} ${e.who} ${e.url}`));
     assert.deepEqual([...paths].sort(), ["POST door /mcp", "POST pf /as/token.oauth2"]);
   });
+});
+
+test("a run with no 403 still prints the baseline sentence and exits 0; a partly 403 run is not inconclusive", async () => {
+  await withFakes({}, (f, r) => {
+    assert.equal(r.code, 0, r.out);
+    assert.match(r.stdout, /it is the baseline/);
+    assert.doesNotMatch(r.stdout, /says nothing about the policy/);
+  });
+  await withFakes({ forbidTool: "ListIndexTool" }, (f, r) => {
+    assert.match(r.stdout, /^CountTool\s+allowed$/m);
+    assert.match(r.stdout, /^ListIndexTool\s+refused-at-grant/m);
+    assert.equal(r.code, 0, r.out);
+  });
+});
+
+test("redaction is case-insensitive and covers the base64 of the secret: nothing leaks even upper-cased or base64-encoded, the token stays shown", async () => {
+  for (const refuse of [false, true]) {
+    await withFakes({ echo: true, refuse }, (f, r) => {
+      noSecretIn(r.out);
+      assert.match(r.stdout, new RegExp(`^token\\s+REAL access token, shown on purpose \\(learning lab\\): ${TOKEN.replace(/\./g, "\\.")}$`, "m"));
+    });
+  }
 });

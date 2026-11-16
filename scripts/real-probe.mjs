@@ -14,11 +14,12 @@
 // This file itself has never been run against a real tenant: it is only exercised against local fake listeners (test/real-probe-e2e.test.js).
 // Assumed, not tested by the lab: that your PF client accepts Basic auth and the scope in PF_SCOPE, that the index named by PROBE_INDEX exists
 // on your door, that HTTP 403 means a grant-layer refusal, and that a policy refusal carries "denied by policy" in the JSON-RPC error message.
-// Exit codes: 0 done, 1 a request failed, 2 refused to run (.env), 3 ran but a verdict was unreadable or the token was rejected.
+// Exit codes: 0 done, 1 a request failed, 2 refused to run (.env), 3 ran but says nothing about the policy: a verdict was unreadable, the token
+// was rejected (401), or every call was refused with HTTP 403 (no AI policy was evaluated).
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
-import { parseEnv, validateEnv, parseMcpBody, classifyVerdict, isInconclusive, toolNames, describeAct, redact, tokenLine, formatVerdict, probeCalls, basicAuthValue } from "./real-probe-lib.mjs";
+import { parseEnv, validateEnv, parseMcpBody, classifyVerdict, isInconclusive, toolNames, describeAct, redact, isAllGrantRefused, tokenLine, formatVerdict, probeCalls, basicAuthValue } from "./real-probe-lib.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const envPath = process.env.REAL_PROBE_ENV || join(root, ".env");
@@ -117,6 +118,10 @@ async function main() {
   }
   if (verdicts.some(isInconclusive)) {
     say("real probe: done, but at least one call was unreadable or the token was rejected, so this run says nothing about the policy.");
+    return 3;
+  }
+  if (isAllGrantRefused(verdicts)) {
+    say("real probe: done, but every call was refused with HTTP 403 at the grant layer, before any AI policy was evaluated, so this run says nothing about the policy.");
     return 3;
   }
   say("real probe: done. This prints one token's two calls. With no policy it is the baseline; whether a policy exists is up to you, this script creates none.");

@@ -4,6 +4,8 @@ import { request } from "node:http";
 import { readFileSync } from "node:fs";
 import { buildServer, readState, runScenario } from "../server/src/index.js";
 import { installNetguard } from "../server/src/netguard.js";
+import { createHealth } from "../server/src/health.js";
+import express from "express";
 import * as pf from "../server/src/pf.js";
 import { SCENARIOS, EVIDENCE, MOCK_NOTE, policiesFor, POLICY_A, POLICY_B } from "../server/src/scenarios.js";
 import { callTool, cedarText, claimActSub, policyRefuses, actSubPolicy, DOOR_URL, ISSUER, AGENT_A, AGENT_B } from "../server/src/cedar.js";
@@ -707,4 +709,58 @@ test("pf verify: signature check and decode", () => {
   assert.equal(pf.decodePayload(t).act.sub, "a");
   assert.equal(pf.verify("garbage.token.value").reason, "bad signature");
   assert.equal(pf.verify(t.replace(/.$/, (c) => (c === "A" ? "B" : "A"))).reason, "bad signature");
+});
+
+// Residual re-check G6b: a Host that is a loopback name on the allowed list (so the host guard lets it in) must never claim the lab-proxy
+// origin through a forged X-Forwarded-Host. Only a non-loopback proxy Host may.
+test("G6b a loopback Host on the allowed list plus a forged X-Forwarded-Host and the proxy's Origin is refused 403 cross_origin", async () => {
+  await withRaw(undefined, async (raw) => {
+    const body = JSON.stringify({ scenario: "step-1-baseline" });
+    const send = (headers) => raw("POST", "/api/run", { "content-type": "application/json", "content-length": Buffer.byteLength(body), ...headers }, body);
+    const forged = { origin: "https://local.ping-devops.com:8443", "x-forwarded-host": "local.ping-devops.com:8443", "x-forwarded-proto": "https" };
+    for (const host of ["localhost:7819", "127.0.0.1:7819"]) {
+      const r = await send({ host, ...forged });
+      assert.equal(r.status, 403, host);
+      assert.equal(r.json.error, "cross_origin", host);
+    }
+    // the same headers behind the real proxy Host are still believed
+    assert.equal((await send({ host: "cedar-act-sub-lab.local.ping-devops.com:7819", ...forged })).status, 200);
+  });
+});
+
+// Residual re-check H3: a failing door check must show as `broken`, in a document that still has the demo-health/1 shape.
+test("H3 health: a failing door check reports state broken (demo-health/1 shape kept); a throwing check is unknown", async () => {
+  const get = async (check) => {
+    const health = createHealth({ check });
+    const app = express();
+    app.use("/api/health", health.router);
+    const srv = app.listen(0, "127.0.0.1");
+    await new Promise((r) => srv.on("listening", r));
+    try {
+      const res = await fetch(`http://127.0.0.1:${srv.address().port}/api/health`);
+      return { status: res.status, body: await res.json() };
+    } finally { health.stop(); srv.close(); }
+  };
+  const broken = await get(() => false);
+  assert.equal(broken.status, 200);
+  assert.equal(broken.body.state, "broken");
+  assert.equal(broken.body.schema, "demo-health/1");
+  assert.equal(broken.body.runtime, "offline");
+  assert.deepEqual(Object.keys(broken.body).sort(), ["at", "demo", "runtime", "schema", "state"]);
+  assert.equal((await get(() => true)).body.state, "ready");
+  assert.equal((await get(() => { throw new Error("boom"); })).body.state, "unknown");
+});
+
+// Residual re-check item 5 (rule 19: the body is exactly {source}).
+test("mode: any key besides source is a 400 with the structured {error, message} shape; a valid body still works", async () => {
+  await withServer(async (j) => {
+    for (const body of [{ source: "mock", x: 1 }, { source: "real", x: 1 }, { x: 1 }, { source: "mock", source2: "mock" }, []]) {
+      const r = await j("/api/mode", body);
+      assert.equal(r.status, 400, JSON.stringify(body));
+      assert.equal(r.body.error, "bad_request");
+      assert.match(r.body.message, /exactly/);
+    }
+    assert.equal((await j("/api/mode", { source: "mock" })).status, 200);
+    assert.equal((await j("/api/mode", { source: "real" })).status, 409);
+  });
 });

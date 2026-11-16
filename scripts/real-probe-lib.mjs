@@ -101,6 +101,10 @@ export function classifyVerdict({ status, body }) {
 // True when a verdict means the run proved nothing about the policy (exit code 3).
 export const isInconclusive = ({ verdict }) => verdict === "unreadable" || verdict === "token-rejected";
 
+// True when EVERY call was refused with HTTP 403 at the grant layer: no AI policy was evaluated, so the run says nothing about the policy
+// (exit code 3 as well). One 403 among other verdicts is a real answer for that call and does not make the run inconclusive.
+export const isAllGrantRefused = (verdicts) => verdicts.length > 0 && verdicts.every(({ verdict }) => verdict === "refused-at-grant");
+
 // The tool names in a tools/list reply, or null when it is not one.
 export function toolNames(body) {
   const tools = body && body.result && body.result.tools;
@@ -115,18 +119,22 @@ export function describeAct(claims) {
   return { actType: "text", actSub: null };
 }
 
-// Anything printed passes through here: every secret value (and its url-encoded form), bearer/basic values, token-shaped key=value pairs and
-// JWT-shaped strings are replaced, control and bidi characters become spaces (a door cannot inject lines or escape codes), and the text is capped.
+// Anything printed passes through here: every secret value (as is, url-encoded and base64 / base64url encoded, matched case-insensitively),
+// bearer/basic values, token-shaped key=value pairs and JWT-shaped strings are replaced, control and bidi characters become spaces (a door
+// cannot inject lines or escape codes), and the text is capped.
 const CONTROL = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g;
+const escapeRegex = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export function redact(text, secrets = []) {
-  const list = [];
+  const forms = new Set();
   for (const s of secrets) {
     if (!s || String(s).length < 4) continue;
-    list.push(String(s));
-    const enc = encodeURIComponent(String(s));
-    if (enc !== String(s)) list.push(enc);
+    const v = String(s);
+    const b64 = Buffer.from(v).toString("base64");
+    for (const f of [v, encodeURIComponent(v), b64, b64.replace(/=+$/, ""), Buffer.from(v).toString("base64url")]) forms.add(f);
   }
-  const scrub = (t) => { for (const s of list) t = t.split(s).join("<redacted>"); return t; };
+  // Longest first, so a form that contains another is replaced whole.
+  const pattern = forms.size ? new RegExp([...forms].sort((a, b) => b.length - a.length).map(escapeRegex).join("|"), "gi") : null;
+  const scrub = (t) => (pattern ? t.replace(pattern, "<redacted>") : t);
   let out = scrub(String(text ?? ""));
   out = scrub(out.replace(CONTROL, " "));
   out = out.replace(/\b(Bearer|Basic)\s+[^\s"',;]+/gi, "$1 <redacted>");

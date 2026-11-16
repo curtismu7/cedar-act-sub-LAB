@@ -6,7 +6,7 @@ import { mkdtempSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseEnv, validateEnv, parseMcpBody, classifyVerdict, toolNames, describeAct, redact, tokenLine, formatVerdict, probeCalls, basicAuthValue, REQUIRED_ENV, DEFAULT_INDEX } from "../scripts/real-probe-lib.mjs";
+import { parseEnv, validateEnv, parseMcpBody, classifyVerdict, toolNames, describeAct, redact, tokenLine, formatVerdict, probeCalls, basicAuthValue, isAllGrantRefused, REQUIRED_ENV, DEFAULT_INDEX } from "../scripts/real-probe-lib.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const example0 = () => parseEnv(readFileSync(join(root, ".env.example"), "utf8"));
@@ -238,4 +238,27 @@ test("tokenLine shows a token-shaped value on one labelled line and nothing else
 
 test("the client secret and the Basic value are still redacted even though the token is shown", () => {
   assert.equal(redact("client_secret=s3cret-value-123 and Basic YWJjOmRlZg==", ["s3cret-value-123"]), "client_secret=<redacted> and Basic <redacted>");
+});
+
+test("redact is case-insensitive and also removes the base64 forms of a secret", () => {
+  const secret = "Sekret-Value-9f8e7d6c";
+  const b64 = Buffer.from(secret).toString("base64");
+  const b64url = Buffer.from(secret).toString("base64url");
+  for (const form of [secret, secret.toUpperCase(), secret.toLowerCase(), encodeURIComponent(secret).toUpperCase(), b64, b64.toUpperCase(), b64.toLowerCase(), b64.replace(/=+$/, ""), b64url]) {
+    const out = redact(`reply says ${form} here`, [secret]);
+    assert.ok(!out.toLowerCase().includes(form.toLowerCase()), `leaked ${form.slice(0, 8)}...: ${out}`);
+    assert.match(out, /<redacted>/);
+  }
+});
+
+test("redact treats regex characters in a secret literally", () => {
+  assert.equal(redact("a.b*c(d) and aXbbbc(d)", ["a.b*c(d)"]), "<redacted> and aXbbbc(d)");
+});
+
+test("isAllGrantRefused: only a run where every call was HTTP 403 (no AI policy was evaluated)", () => {
+  const g = { verdict: "refused-at-grant" };
+  assert.equal(isAllGrantRefused([g, g, g]), true);
+  assert.equal(isAllGrantRefused([g, g, { verdict: "allowed" }]), false);
+  assert.equal(isAllGrantRefused([g, g, { verdict: "refused-by-policy" }]), false);
+  assert.equal(isAllGrantRefused([]), false);
 });

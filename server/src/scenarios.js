@@ -49,7 +49,7 @@ export const SCENARIOS = [
     id: "no-token", group: "extra", label: "No token", kind: "calls", token: "none", policies: [POLICY_A, POLICY_B],
     calls: ["CountTool", "ListIndexTool"], expect: { CountTool: "refused", ListIndexTool: "refused" }, basis: "not measured",
     title: "No token",
-    what: "The call carries no Authorization header. The door refuses at sign-in (401), before any policy is evaluated: it fails closed. The 401 wording mirrors the sibling lab; it was not measured here.",
+    what: "The call carries no Authorization header. Expected (simulated, not measured): the door refuses at sign-in (401), before any policy is evaluated, so it fails closed. The 401 wording mirrors the sibling lab; it was not measured here.",
     say: "No token, no call: in this mock the door refuses at sign-in, before any policy (simulated, not measured)."
   },
   {
@@ -87,7 +87,7 @@ export const EVIDENCE = {
   wire: "On the wire the refusal is a JSON-RPC error with code -32600. The mock in this lab answers HTTP 400 for it, like pf-privilege-obo-LAB.",
   notMeasured: [
     "A second real agent whose token carries a different act.sub: the one real client always had a single act.sub, so the refusal came from a policy naming a different agent, not from a second agent calling.",
-    "act emitted as the TEXT \"{}\": the rule needs an object, and the 'act emitted as text' scenario is the simulation of that, not a measurement.",
+    "act emitted as the TEXT \"{}\": the rule is believed to need an object (UNVERIFIED), and the 'act emitted as text' scenario is the simulation of that, not a measurement.",
     "Whether the real door matches act.sub exactly, by substring or by set membership: only a policy naming a different value was refused, so 'agent-client' against 'agent-client-example' was never tried.",
     "The no-token and Candidate scenarios on the real door."
   ],
@@ -97,5 +97,5 @@ export const EVIDENCE = {
     "UNVERIFIED, per the Privilege console documentation and not re-run here: a Candidate policy is not enforced, only Active is."
   ],
   command: "npm run real",
-  commandNote: "Run by the owner in a terminal with a local, git-ignored .env (see .env.example). It mints a client-credentials token, runs the baseline probe (tools/list, CountTool, ListIndexTool) and prints verdicts. It never creates or deletes policies, and the server never makes this call. This script has never been run against a real PingFederate or door: it copies the call sequence of a scratch script that was run on 2026-11-16, but nothing has re-run it. Assumed, not tested: that your PingFederate client accepts Basic client authentication and your scope, the token endpoint path, that the index it names exists on your door, that HTTP 403 means a grant-layer refusal and that a policy refusal says \"denied by policy\". The first owner run is the first test. Only its baseline row can be compared with the measured table."
+  commandNote: "Run by the owner in a terminal with a local, git-ignored .env (see .env.example). It mints a client-credentials token (audience = DOOR_URL, scope = PF_SCOPE) and prints it on purpose, as this is a learning lab (never the client secret or the Basic value), then sends tools/list, CountTool and ListIndexTool with no initialize call and no session, and prints a verdict for each. It never creates or deletes policies, and the server never makes this call. This script has never been run against a real PingFederate or door: it copies the call sequence of a scratch script that was run on 2026-11-16, but nothing has re-run it. Assumed, not tested: that your PingFederate client accepts Basic client authentication and your scope, the token endpoint path, that the index it names exists on your door, that HTTP 403 means a grant-layer refusal and that a policy refusal says \"denied by policy\". The first owner run is the first test. Only its baseline row can be compared with the measured table."
 };
