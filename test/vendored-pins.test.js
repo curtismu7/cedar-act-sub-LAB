@@ -14,9 +14,8 @@ const pins = (file) => readFileSync(join(root, file), "utf8").split("\n").filter
 test("web/src/top-menu/* matches top-menu.sha256 and both files are pinned", () => {
   const dir = "web/src/top-menu";
   const p = pins(`${dir}/top-menu.sha256`);
-  // Pin entries are repo-root paths (web/src/top-menu/<file>), written by scripts/check-top-menu.sh --pin.
-  assert.deepEqual(p.map(([, f]) => f.split("/").pop()).sort(), ["TopMenu.jsx", "top-menu.css"]);
-  for (const [hash, file] of p) assert.equal(sha(file), hash, `${file} differs from top-menu.sha256 (hand-edited, or re-vendored without re-pinning)`);
+  assert.deepEqual(p.map(([, f]) => f).sort(), ["TopMenu.jsx", "top-menu.css"]);
+  for (const [hash, file] of p) assert.equal(sha(`${dir}/${file}`), hash, `${file} differs from top-menu.sha256 (hand-edited, or re-vendored without re-pinning)`);
 });
 
 test("web/src/components/JsonPane.* matches its pin files", () => {
