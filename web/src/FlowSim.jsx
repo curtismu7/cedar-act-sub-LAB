@@ -78,6 +78,7 @@ export default function FlowSim({ activeScenario, speed, resetKey }) {
     setNodes(studioNodes());
     clearWalk();
     setRunning(false);
+    window.dispatchEvent(new CustomEvent("cas:reset"));
   };
 
   useEffect(() => {
@@ -104,17 +105,22 @@ export default function FlowSim({ activeScenario, speed, resetKey }) {
     const stale = () => mine !== latest.current;
     setRunning(true);
     clearWalk();
+    // Story host hook: the page announces runs (storyWiring.js listens). ok is false only when the request itself failed;
+    // a policy refusal is a completed run (the refusal IS the result).
+    window.dispatchEvent(new CustomEvent("cas:run-start"));
+    const finishRun = (ok) => window.dispatchEvent(new CustomEvent("cas:run-end", { detail: { ok } }));
     // One pause of the walk; false when a Reset or a newer run took over meanwhile (nothing more is drawn then).
     const wait = async () => {
       await new Promise((r) => setTimeout(r, 250 / (speed || 1)));
       return !stale();
     };
     try {
-      if (!(await wait())) return;
+      if (!(await wait())) { finishRun(true); return; }
       const res = await postJson("/api/run", { scenario: scenario.id });
-      if (stale()) return;
+      if (stale()) { finishRun(true); return; }
       if (res.status !== 200 || !res.body || !res.body.calls) {
         setError(`The run failed: ${failureText(res.status, res.body)}`);
+        finishRun(false);
         return;
       }
       const body = res.body;
@@ -134,6 +140,7 @@ export default function FlowSim({ activeScenario, speed, resetKey }) {
         }
       }
       setResult(body);
+      finishRun(true);
     } finally {
       // A failed or interrupted run never leaves Simulate disabled.
       if (!stale()) setRunning(false);

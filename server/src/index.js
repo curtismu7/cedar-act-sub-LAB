@@ -7,6 +7,7 @@ import { dirname, join } from "node:path";
 import * as pf from "./pf.js";
 import { callTool, cedarText, ISSUER, DOOR_URL, AGENT_A, DOOR } from "./cedar.js";
 import { doorTrace, startTrace } from "./cedarTrace.js";
+import { storyResponse } from "./storyRoute.js";
 import { installNetguard } from "./netguard.js";
 import { hostGuard, writeGuard, parseAllowedHosts } from "./guards.js";
 import { createHealth } from "./health.js";
@@ -107,6 +108,13 @@ export function buildServer({ netguard } = {}) {
     check: () => runScenario(step3).calls.every((c) => c.verdict === step3.expect[c.tool])
   });
   app.use("/api/health", health.router);
+
+  // Story mode wording (shared pattern: shared/story/README.md in AI-DEMO-Standalone). The page's live Story (and any later video) reads this one copy of captions.md.
+  app.get("/api/story", (req, res) => {
+    const { status, body } = storyResponse();
+    res.status(status).json(body);
+  });
+
 
   // Test-suite port verification (active only when the test helper sets WI_VERIFY_PORT):
   // the verifier round-trips a unique marker through the app itself, proving the connection
