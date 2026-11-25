@@ -9,6 +9,7 @@ export default function ScenarioPicker({ scenarios, active, onSelect }) {
       key={s.id}
       type="button"
       className="scenario-btn"
+      data-testid={`scenario-${s.id}`}
       aria-pressed={Boolean(active && active.id === s.id)}
       onClick={() => onSelect(s)}
     >

@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
 import TopMenu from "./top-menu/TopMenu.jsx";
+import StoryToggle, { storyKey } from "./story/StoryToggle.jsx";
 import VerifyMark from "./components/VerifyMark.jsx";
 import ShelfLink from "./components/ShelfLink.jsx";
 import HelpDialog from "./help-dialog/HelpDialog.jsx";
@@ -15,6 +16,25 @@ import { useApi, postJson } from "./api.js";
 
 // The version the header shows: package.json's, fixed at build time (vite.config.js).
 const LAB_VERSION = typeof __LAB_VERSION__ === "string" ? __LAB_VERSION__ : null;
+
+// Story mode (shared/story/README.md): the toggle is in the shell's extra slot; the walk-through itself is lazy-loaded, so Demo mode never pays for it.
+const STORY_PREFIX = "cas";
+const StoryRoot = lazy(() => import("./StoryRoot.jsx"));
+
+// If the Story chunk cannot load (the lab was rebuilt, a stale file name, the network) the page must survive: Demo mode is never taken down by Story.
+class StoryBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { failed: false }; }
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div className="story-bar" role="alert" data-testid="story-error">
+        <span className="story-msg">Story could not load. Reload the page and try again.</span>
+        <button type="button" onClick={this.props.onExit}>Exit</button>
+      </div>
+    );
+  }
+}
 
 // Presenter mode (rule 3): shows the talk-track line for the current scenario while presenting.
 function presenterSay(active) {
@@ -35,6 +55,9 @@ export default function App() {
   const [presenter, setPresenter] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [talkOpen, setTalkOpen] = useState(false);
+  // Story mode: on = Demo|Story toggle; toggleKey remounts the toggle so its state matches the view after an Exit.
+  const [storyOn, setStoryOn] = useState(() => { try { return localStorage.getItem(storyKey(STORY_PREFIX)) === "story" || new URLSearchParams(window.location.search).has("story"); } catch { return false; } });
+  const [toggleKey, setToggleKey] = useState(0);
   // The section the nav marks as current: follows the link the viewer picked, and the address when it changes.
   const [section, setSection] = useState(() => (typeof location !== "undefined" && location.hash === "#evidence" ? "evidence" : "flow"));
   const modeBox = useRef(null);
@@ -89,6 +112,17 @@ export default function App() {
     setResetKey((k) => k + 1);
   };
 
+  const onView = (on) => {
+    setStoryOn(on);
+    try { localStorage.setItem(storyKey(STORY_PREFIX), on ? "story" : "demo"); } catch { /* storage blocked: the choice just does not persist */ }
+  };
+  // Exit in the Story bar: back to Demo, remembered, and ?story=1 dropped from the address so a reload stays in Demo.
+  const leaveStory = () => {
+    try { const u = new URL(window.location.href); if (u.searchParams.has("story")) { u.searchParams.delete("story"); window.history.replaceState(null, "", u); } } catch { /* no address to tidy */ }
+    setToggleKey((k) => k + 1);
+    onView(false);
+  };
+
   const data = catalog.data;
   return (
     <div className="app">
@@ -119,6 +153,7 @@ export default function App() {
                   <option value={4}>4×</option>
                 </select>
               </label>
+              <StoryToggle key={toggleKey} prefix={STORY_PREFIX} onChange={onView} />
               {realOff && (
                 <span id="real-reason" className="real-reason" data-testid="real-reason">
                   Real is owner-only: run <code>npm run real</code> in a terminal (see Run it yourself, below).
@@ -156,6 +191,14 @@ export default function App() {
       </main>
       <HelpDialog isOpen={helpOpen} onClose={() => setHelpOpen(false)} sections={HELP_SECTIONS} />
       <TalkTrackDialog isOpen={talkOpen} onClose={() => setTalkOpen(false)} talk={TALK_TRACK} />
+
+      {storyOn ? (
+        <StoryBoundary onExit={leaveStory}>
+          <Suspense fallback={null}>
+            <StoryRoot mode="mock" ready={Boolean(info.data)} onExit={leaveStory} prefix={STORY_PREFIX} />
+          </Suspense>
+        </StoryBoundary>
+      ) : null}
       <footer className="app-footer">
         Tester tier · runs are simulated · mock tokens labelled · the measured card is static evidence from 2026-11-16
       </footer>
