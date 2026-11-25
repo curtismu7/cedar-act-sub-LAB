@@ -5,6 +5,7 @@ import http from 'node:http';
 import dns from 'node:dns';
 import dgram from 'node:dgram';
 import { installNetguard, netguardSelfTest } from '../server/src/netguard.js';
+import { stop } from './test-helpers.js';
 
 test('self-test: every route out is refused and recorded, none reaches the network', async () => {
   const r = await netguardSelfTest();
@@ -32,7 +33,7 @@ test('loopback still works under the guard', async () => {
     const res = await fetch(`http://127.0.0.1:${server.address().port}/`, { signal: AbortSignal.timeout(30_000) });
     assert.equal(await res.text(), 'ok');
     assert.deepEqual(g.attempts, []);
-  } finally { await new Promise((r) => server.close(r)); g.restore(); } // always close: a failed assertion must not leave a listener that hangs the run
+  } finally { await stop(server); g.restore(); } // always close: a failed assertion must not leave a listener that hangs the run
 });
 
 test('restore puts the real functions back', async () => {
