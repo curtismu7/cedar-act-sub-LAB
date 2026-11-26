@@ -12,6 +12,7 @@ import SimulationBanner from "./Banner.jsx";
 import FlowSim from "./FlowSim.jsx";
 import ScenarioPicker from "./ScenarioPicker.jsx";
 import Evidence from "./Evidence.jsx";
+import RealRunPanel from "./RealRunPanel.jsx";
 import { useApi, postJson } from "./api.js";
 
 // The version the header shows: package.json's, fixed at build time (vite.config.js).
@@ -154,11 +155,15 @@ export default function App() {
                 </select>
               </label>
               <StoryToggle key={toggleKey} prefix={STORY_PREFIX} onChange={onView} />
-              {realOff && (
+              {realOff ? (
                 <span id="real-reason" className="real-reason" data-testid="real-reason">
                   Real is owner-only: run <code>npm run real</code> in a terminal (see Run it yourself, below).
                 </span>
-              )}
+              ) : source === "real" ? (
+                <span id="real-reason" className="real-reason" data-testid="real-on-hint">
+                  REAL mode: the Real run panel below talks to your PingFederate and door. Everything else stays simulated.
+                </span>
+              ) : null}
             </>}
           >
             <ShelfLink />
@@ -186,6 +191,7 @@ export default function App() {
           </aside>
         )}
         <ScenarioPicker scenarios={(data && data.scenarios) || []} active={activeScenario} onSelect={setActiveScenario} />
+        {source === "real" && <RealRunPanel />}
         <FlowSim activeScenario={activeScenario} speed={speed} resetKey={resetKey} />
         <Evidence evidence={data && data.evidence} />
       </main>

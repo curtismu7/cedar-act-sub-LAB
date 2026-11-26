@@ -10,6 +10,7 @@ import { doorTrace, startTrace } from "./cedarTrace.js";
 import { storyResponse } from "./storyRoute.js";
 import { installNetguard } from "./netguard.js";
 import { hostGuard, writeGuard, parseAllowedHosts } from "./guards.js";
+import { realModeState, runRealProbe } from "./realMode.js";
 import { createHealth } from "./health.js";
 import { SCENARIOS, STEP_IDS, EVIDENCE, MOCK_NOTE, policiesFor } from "./scenarios.js";
 
@@ -77,7 +78,7 @@ export function runScenario(scenario, trace = startTrace()) {
   };
 }
 
-export function buildServer({ netguard } = {}) {
+export function buildServer({ netguard, realEnvPath: realEnvPathOpt } = {}) {
   // Rule 1: zero real outbound by default. The mock issuer/gateway/backend are
   // in-process, so nothing here has a reason to leave the machine.
   installNetguard();
@@ -125,9 +126,18 @@ export function buildServer({ netguard } = {}) {
     res.json({ ok: true });
   });
 
-  // Rule 19: Real is owner-only here. The toggle is shown but disabled, with this reason; the server never calls out.
+  // Real mode, owner-gated: available only when a valid local .env exists (never in the Docker standalone, which mounts none). The .env is
+  // re-read per request, so an edit takes effect without a restart. The reason never contains a value from the file.
+  const realEnvPath = realEnvPathOpt || process.env.REAL_PROBE_ENV || join(__dirname, "..", "..", ".env");
+  let realResult = null; // the last real run, in memory only; never written to disk, replaced on each run
+  const realState = () => realModeState(realEnvPath);
+  const REAL_OFF_REASON = (rs) => rs.available
+    ? REAL_REASON
+    : `Real needs a local .env this server can use (${rs.reason}). The Docker standalone has none and stays Mock.`;
+
   app.get("/api/info", (req, res) => {
-    res.json({ source: state.source, realAvailable: false, realReason: REAL_REASON });
+    const rs = realState();
+    res.json({ source: state.source, realAvailable: rs.available, realReason: REAL_OFF_REASON(rs) });
   });
 
   app.post("/api/mode", (req, res) => {
@@ -136,10 +146,32 @@ export function buildServer({ netguard } = {}) {
     const keys = body && typeof body === "object" && !Array.isArray(body) ? Object.keys(body) : [];
     if (keys.length !== 1 || keys[0] !== "source") return res.status(400).json({ error: "bad_request", message: "body must be exactly {source:\"mock\"|\"real\"}" });
     const { source } = body;
-    if (source === "real") return res.status(409).json({ error: "real_unavailable", message: REAL_REASON });
+    if (source === "real") {
+      const rs = realState();
+      if (!rs.available) return res.status(409).json({ error: "real_unavailable", message: REAL_OFF_REASON(rs) });
+      state.source = "real";
+      return res.json({ source: state.source });
+    }
     if (source !== "mock") return res.status(400).json({ error: "bad_request", message: "body must be exactly {source:\"mock\"|\"real\"}" });
     state.source = "mock";
     res.json({ source: state.source });
+  });
+
+  // The real run: same four read-only POSTs as `npm run real`, executed on the page's behalf. The netguard hole is scoped to the two .env
+  // origins and exists only for the duration of this run; without a valid .env this answers 409 and nothing leaves the machine.
+  app.post("/api/real/run", (req, res) => {
+    const rs = realState();
+    if (!rs.available) return res.status(409).json({ error: "real_unavailable", message: REAL_OFF_REASON(rs) });
+    if (state.source !== "real") return res.status(409).json({ error: "not_real_mode", message: "switch Mode to Real first" });
+    const restoreHole = installNetguard().addAllowlist((h) => h === new URL(rs.env.PF_ISSUER).hostname || h === new URL(rs.env.DOOR_URL).hostname);
+    runRealProbe(rs)
+      .then((result) => { realResult = result; res.json(result); })
+      .catch((e) => res.status(502).json({ error: "real_run_failed", message: String(e.message || e) }))
+      .finally(restoreHole);
+  });
+
+  app.get("/api/real/last", (req, res) => {
+    res.json({ result: realResult });
   });
 
   // The header's Shelf button and the verification mark ask this lab for the shelf's address. Opened on its own port the lab answers with
