@@ -41,16 +41,6 @@ Every run on this page is simulated; the door is an evaluator of one rule shape,
 
 ---
 
-# Step: banner
-
-## Title
-What is simulated here
-
-## Text
-The runs use a mock token and a mock door. The door is an evaluator of one rule shape, not a Cedar engine, and it decides nothing real. The measured card at the bottom is what actually happened on a real tenant.
-
----
-
 # Step: baseline_intro
 
 ## Title

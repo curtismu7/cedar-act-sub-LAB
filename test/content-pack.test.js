@@ -54,7 +54,7 @@ test("shelf entry: description <= 300, tags from the family list, portable compo
 
 test("the OBO lab's identity is gone: no old id, catalog id, port or chain wording is left outside the fork attribution", () => {
   const files = ["README.md", "CLAUDE.md", "package.json", "docker-compose.yml", "Dockerfile", "content-pack.json", "docs/shelf-entry.json", "docs/talk-track.md",
-    "web/src/studio-data/cedar-act-sub-flow.json", "web/app.css", "web/index.html", "web/src/App.jsx", "web/src/FlowSim.jsx", "web/src/Banner.jsx", "web/src/Evidence.jsx", "web/src/RunResult.jsx",
+    "web/src/studio-data/cedar-act-sub-flow.json", "web/app.css", "web/index.html", "web/src/App.jsx", "web/src/FlowSim.jsx", "web/src/mode-modal/ModeModal.jsx", "web/src/Evidence.jsx", "web/src/RunResult.jsx",
     "web/src/ScenarioPicker.jsx", "server/src/index.js", "server/src/cedar.js", "server/src/cedarTrace.js", "server/src/pf.js", "server/src/scenarios.js", "scripts/doctor.mjs",
     "scripts/reset.mjs", "scripts/real-probe.mjs", "scripts/real-probe-lib.mjs", ".env.example", ".github/workflows/ci.yml"];
   const OLD = /\bD130\b|\b7812\b|\b7810\b|\bOBO\b|on-behalf-of|ChainSteps|IssuesPanel|SearchIndexTool|priya\.nair|scope-search-guard|act-sub-guard|pf-obo/i;

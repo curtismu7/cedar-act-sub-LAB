@@ -15,7 +15,7 @@ beforeAll(() => {
   if (!HTMLElement.prototype.releasePointerCapture) HTMLElement.prototype.releasePointerCapture = () => {};
 });
 beforeEach(() => setJsonView("raw"));
-afterEach(() => cleanup());
+afterEach(() => { cleanup(); try { sessionStorage.clear(); } catch { /* none */ } });
 
 // The catalog and the runs come from the real server modules, so the page is tested against what the server really answers.
 const catalog = () => ({
@@ -27,14 +27,14 @@ const catalog = () => ({
 });
 const REAL_REASON = "Real is owner-only and runs from your terminal: npm run real";
 
-function mockFetch({ modeStatus = {} } = {}) {
+function mockFetch({ modeStatus = {}, source = "mock" } = {}) {
   const calls = [];
   global.fetch = (path, opts) => {
     const method = (opts && opts.method) || "GET";
     calls.push({ path, method, body: opts && opts.body });
     const j = (body, status = 200) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
     if (path === "/api/catalog") return j(catalog());
-    if (path === "/api/info") return j({ source: "mock", realAvailable: false, realReason: REAL_REASON });
+    if (path === "/api/info") return j({ source, realAvailable: source === "real", realReason: REAL_REASON });
     if (path === "/api/run") return j(runScenario(SCENARIOS.find((s) => s.id === JSON.parse(opts.body).scenario)));
     if (path === "/api/reset") return j({ ok: true });
     if (path === "/api/mode") {
@@ -47,14 +47,45 @@ function mockFetch({ modeStatus = {} } = {}) {
 }
 
 describe("the page", () => {
-  it("renders the simulation banner first, saying what is simulated and that the door is not a Cedar engine", async () => {
+  it("opens on a modal that says MOCK, with what is simulated and that the door is not a Cedar engine, and closes on Got it without coming back this session", async () => {
     mockFetch();
+    sessionStorage.clear();
+    const { unmount } = render(<App />);
+    const modal = await screen.findByTestId("mode-modal");
+    expect(modal.dataset.mode).toBe("mock");
+    expect(modal.textContent).toMatch(/MOCK/);
+    expect(modal.textContent).toMatch(/simulated/i);
+    expect(modal.textContent).toMatch(/not a Cedar engine/);
+    expect(modal.textContent).toMatch(/decides nothing real/);
+    expect(modal.textContent).toMatch(/whether the real rule compares exactly was not measured/);
+    expect(modal.textContent).toMatch(/measured card further down is static evidence from a real tenant/);
+    expect(document.querySelector(".banner")).toBeNull();
+    expect(screen.queryByTestId("sim-banner")).toBeNull();
+    fireEvent.click(screen.getByTestId("mode-modal-ok"));
+    expect(screen.queryByTestId("mode-modal")).toBeNull();
+    unmount();
     render(<App />);
-    const banner = await screen.findByTestId("sim-banner");
-    expect(banner.textContent).toMatch(/simulated/i);
-    expect(banner.textContent).toMatch(/not a Cedar engine/);
-    expect(banner.textContent).toMatch(/ONE Cedar rule shape/);
-    expect(banner.compareDocumentPosition(screen.getByTestId("intro")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await screen.findByTestId("intro");
+    expect(screen.queryByTestId("mode-modal")).toBeNull();
+  });
+
+  it("the modal says REAL, and that everything but the Real run panel stays simulated, when the lab runs in Real", async () => {
+    sessionStorage.clear();
+    mockFetch({ source: "real" });
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("mode-modal").dataset.mode).toBe("real"));
+    const modal = screen.getByTestId("mode-modal");
+    expect(modal.textContent).toMatch(/REAL/);
+    expect(modal.textContent).toMatch(/Everything else on this page stays simulated/);
+    expect(modal.textContent).toMatch(/not a Cedar engine/);
+  });
+
+  it("a Real lab still shows REAL after the first (Mock) answer was dismissed", async () => {
+    sessionStorage.clear();
+    sessionStorage.setItem("cas-mode-seen-mock", "1");
+    mockFetch({ source: "real" });
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("mode-modal").dataset.mode).toBe("real"));
   });
 
   it("renders the shared TopMenu in the header, with mode, theme, presenter and Reset", async () => {
@@ -165,7 +196,8 @@ describe("the page", () => {
     expect(calls.some((c) => c.path === "/api/reset" && c.method === "POST")).toBe(true);
   });
 
-  it("presenter mode shows the talk-track line and keeps the simulation banner", async () => {
+  it("presenter mode shows the talk-track line and keeps the Real-or-mock modal", async () => {
+    sessionStorage.clear();
     mockFetch();
     render(<App />);
     fireEvent.click(await screen.findByTestId("presenter"));

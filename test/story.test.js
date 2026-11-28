@@ -33,7 +33,7 @@ test('story: the parity check really fails when the wording and the script drift
 });
 
 test('story: the script walks the talk track in order, all bubbles Mock (this lab has no Real mode)', () => {
-  const order = ['banner', 'baseline_intro', 'baseline_run', 'add_policies_intro', 'add_policies_run', 'same_token_intro', 'same_token_run', 'remove_run', 'act_text_run', 'no_token_run', 'candidate_run', 'measured'];
+  const order = ['baseline_intro', 'baseline_run', 'add_policies_intro', 'add_policies_run', 'same_token_intro', 'same_token_run', 'remove_run', 'act_text_run', 'no_token_run', 'candidate_run', 'measured'];
   assert.deepEqual(steps.filter((s) => s.type === 'bubble' && !STORY_ONLY.includes(s.key)).map((s) => s.key), order);
   assert.deepEqual(steps.filter((s) => s.modes?.includes('real')).map((s) => s.key), [], 'no Real-only steps: the lab is Mock-only');
 });

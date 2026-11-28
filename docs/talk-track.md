@@ -4,7 +4,7 @@ One-liner: "Does Privilege's Cedar policy really match on the agent's act.sub cl
 
 ## The walk (about 5 minutes)
 
-1. **Point at the banner.** The runs are simulated: a mock token and a mock door. The door is an evaluator of one rule shape, not a Cedar engine, and it decides nothing real. (10 seconds.)
+1. **Read the Mock modal.** The page opens on a MOCK or REAL modal. In Mock the runs are simulated: a mock token and a mock door. The door is an evaluator of one rule shape, not a Cedar engine, and it decides nothing real. (10 seconds.)
 2. **Step 1, baseline.** No policy. The same token calls CountTool and ListIndexTool and both are allowed.
 3. **Step 2, add two Active policies.** Read the Cedar out loud: forbid the tool unless the token's claims have act.sub and it contains the agent. Policy A names the token's own agent, policy B names a different one. Only Active is enforced.
 4. **Step 3, same token, two tools.** CountTool is allowed, ListIndexTool is refused: `action denied by policy: ListIndexTool requires act.sub to be agent-b-example`, JSON-RPC -32600. Open "What the mock door did (simulated)" to show the two checks the mock computed: sign-in passed, the policy refused. It is the lab's mock, not Privilege.

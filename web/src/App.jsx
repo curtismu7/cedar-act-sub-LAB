@@ -8,7 +8,7 @@ import TalkTrackDialog from "./talk-track/TalkTrackDialog.jsx";
 import { HELP_SECTIONS } from "./helpContent.js";
 import { TALK_TRACK } from "./talkTrack.js";
 import "./top-menu/top-menu.css";
-import SimulationBanner from "./Banner.jsx";
+import ModeModal from "./mode-modal/ModeModal.jsx";
 import FlowSim from "./FlowSim.jsx";
 import ScenarioPicker from "./ScenarioPicker.jsx";
 import Evidence from "./Evidence.jsx";
@@ -21,6 +21,11 @@ const LAB_VERSION = typeof __LAB_VERSION__ === "string" ? __LAB_VERSION__ : null
 // Story mode (shared/story/README.md): the toggle is in the shell's extra slot; the walk-through itself is lazy-loaded, so Demo mode never pays for it.
 const STORY_PREFIX = "cas";
 const StoryRoot = lazy(() => import("./StoryRoot.jsx"));
+// The Real-or-mock modal (shared/mode-modal): the one-line facts the old simulation banner carried. The measured card is static evidence in both modes.
+const MODE_LINES = {
+  mock: "Everything on this page is simulated: a mock token and a mock door that checks one rule shape, not a Cedar engine, and it decides nothing real (whether the real rule compares exactly was not measured). Only the measured card further down is static evidence from a real tenant.",
+  real: "The Real run panel talks to your PingFederate and door. Everything else on this page stays simulated, and the door is not a Cedar engine; the measured card further down is static evidence.",
+};
 
 // If the Story chunk cannot load (the lab was rebuilt, a stale file name, the network) the page must survive: Demo mode is never taken down by Story.
 class StoryBoundary extends React.Component {
@@ -173,7 +178,6 @@ export default function App() {
       </header>
       <div className="accent-rule" aria-hidden="true" />
       <main>
-        <SimulationBanner source={source} />
         {(catalog.error || info.error) && (
           <div className="error-pane" role="alert" data-testid="load-error">
             <span>The page could not load its data: {catalog.error || info.error}.</span>
@@ -195,6 +199,7 @@ export default function App() {
         <FlowSim activeScenario={activeScenario} speed={speed} resetKey={resetKey} />
         <Evidence evidence={data && data.evidence} />
       </main>
+      <ModeModal mode={source} lines={MODE_LINES} suppress={storyOn} storageKey="cas-mode" />
       <HelpDialog isOpen={helpOpen} onClose={() => setHelpOpen(false)} sections={HELP_SECTIONS} />
       <TalkTrackDialog isOpen={talkOpen} onClose={() => setTalkOpen(false)} talk={TALK_TRACK} />
 
