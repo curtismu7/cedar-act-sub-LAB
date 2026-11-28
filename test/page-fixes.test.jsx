@@ -123,10 +123,11 @@ describe("honesty (B1, M1, M3, M4, M5, M6, BD-1, BD-3, BD-7, R2)", () => {
     expect(screen.getByTestId("evidence-label").className).toContain("basis-measured");
   });
 
-  it("MT-10 the static-card hint, the 'simulated run' chip, the banner and the no-token note are pinned", async () => {
+  it("MT-10 the static-card hint, the 'simulated run' chip, the modal and the no-token note are pinned", async () => {
+    sessionStorage.clear();
     mockFetch();
     render(<App />);
-    expect(await screen.findByTestId("sim-banner")).toHaveTextContent("Nothing leaves this machine.");
+    expect(await screen.findByTestId("mode-modal")).toHaveTextContent("Only the measured card further down is static evidence from a real tenant.");
     expect(screen.getByTestId("evidence")).toHaveTextContent("This card is static text, not a run of the mock above.");
     await pick("No token");
     await ran();
@@ -163,7 +164,7 @@ describe("honesty (B1, M1, M3, M4, M5, M6, BD-1, BD-3, BD-7, R2)", () => {
     render(<App />);
     const intro = await screen.findByTestId("intro");
     expect(intro.textContent).toMatch(/Cedar is the policy language Privilege uses for its AI policies/);
-    expect(screen.getByTestId("sim-banner").textContent).toMatch(/not a Cedar engine/);
+    expect(screen.getByTestId("mode-modal").textContent).toMatch(/not a Cedar engine/);
   });
 
   it("m2 the policy list says the Cedar is this lab's generated shape, and only the contains test was read from the tenant", async () => {
@@ -201,10 +202,11 @@ describe("honesty hedges are pinned where they are read (residual re-check)", ()
     expect(whatOf()).toMatch(/not re-run here/);
   });
 
-  it("H4 the banner says whether the real rule compares exactly was not measured", async () => {
+  it("H4 the modal says whether the real rule compares exactly was not measured", async () => {
+    sessionStorage.clear();
     mockFetch();
     render(<App />);
-    expect((await screen.findByTestId("sim-banner")).textContent).toContain("whether the real rule does was not measured");
+    expect((await screen.findByTestId("mode-modal")).textContent).toContain("whether the real rule compares exactly was not measured");
   });
 
   it("the no-token text hedges in the very sentence that says the door refuses at sign-in (401)", async () => {

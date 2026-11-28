@@ -8,16 +8,12 @@
 //
 // This lab has no Real mode: every step is Mock wording, every run simulated. The measured card is static content, not a run.
 
-const BANNER = '[data-testid=sim-banner]';
 const SCEN = (id) => `[data-testid=scenario-${id}]`;
 const RESULT = '[data-testid=flow-sim]';
 const EVID = '[data-testid=evidence]';
 
 export const STEPS = [
   { key: 'opening', type: 'slide', trigger: 'load' },
-
-  // ---- banner: what is simulated
-  { key: 'banner', type: 'bubble', trigger: 'load', target: BANNER, prefer: 'below' },
 
   // ---- Step 1: baseline
   { key: 'baseline_intro', type: 'bubble', trigger: 'load', target: SCEN('step-1-baseline'), prefer: 'below' },

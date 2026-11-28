@@ -24,7 +24,6 @@ APP = os.environ.get("APP_URL", "http://127.0.0.1:7819")
 # The walk: (key, kind, scenario-to-click-or-None). Mirrors web/src/storyScript.js; test/story.test.js checks the order.
 WALK = [
     ("opening", "slide", None),
-    ("banner", "bubble", None),
     ("baseline_intro", "bubble", None), ("baseline_run", "run", "step-1-baseline"),
     ("add_policies_intro", "bubble", None), ("add_policies_run", "run", "step-2-add-policies"),
     ("same_token_intro", "bubble", None), ("same_token_run", "run", "step-3-same-token"),

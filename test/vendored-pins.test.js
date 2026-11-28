@@ -27,11 +27,12 @@ test("web/src/components/JsonPane.* matches its pin files", () => {
   }
 });
 
-test("the shared dialogs (floating-dialog, help-dialog, talk-track) and ShelfLink match their pin files, and every file in those folders is pinned", () => {
+test("the shared dialogs (floating-dialog, help-dialog, talk-track, mode-modal) and ShelfLink match their pin files, and every file in those folders is pinned", () => {
   const sets = [
     ["web/src/floating-dialog", "floating-dialog.sha256", ["FloatingDialog.jsx", "floating-dialog.css", "floating-dialog.test.jsx", "geometry.js", "useFloatingPanel.js"]],
     ["web/src/help-dialog", "help-dialog.sha256", ["HelpDialog.jsx"]],
     ["web/src/talk-track", "talk-track.sha256", ["TalkTrackDialog.jsx"]],
+    ["web/src/mode-modal", "mode-modal.sha256", ["ModeModal.jsx", "mode-modal.css"]],
     ["web/src/components", "ShelfLink.sha256", ["ShelfLink.jsx"]]
   ];
   for (const [dir, pinFile, files] of sets) {
