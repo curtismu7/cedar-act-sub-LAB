@@ -204,7 +204,7 @@ describe("the page", () => {
     expect(screen.getByTestId("presenter-say").textContent).toMatch(/Start with step 1/);
     fireEvent.click(screen.getByRole("button", { name: "3 Same token, two tools" }));
     expect(screen.getByTestId("presenter-say").textContent).toMatch(/names a different agent, the call is refused/);
-    expect(screen.getByTestId("sim-banner")).toBeTruthy();
+    expect(screen.getByTestId("mode-modal")).toBeTruthy();
   });
 
   it("the measured card is separate from the runs and labelled with its date", async () => {

@@ -145,7 +145,7 @@ describe("Talk track", () => {
     expect(within(dialog).getByTestId("talk-track")).toBeTruthy();
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(TALK_TRACK.length);
     expect(within(dialog).getByRole("heading", { name: "Read the Mock modal" })).toBeInTheDocument();
-    expect(dialog).toHaveTextContent(/The runs are simulated/);
+    expect(dialog).toHaveTextContent(/the runs are simulated/);
     fireEvent.click(toggle);
     await waitFor(() => expect(screen.queryByTestId("talk-track-dialog")).toBeNull());
     expect(err).not.toHaveBeenCalled();
